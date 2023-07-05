@@ -28,7 +28,7 @@ export default {
       },
     });
 
-    const { data: reviews } = await octokit.rest.pulls.listReviews({
+    const { data: allReviews } = await octokit.rest.pulls.listReviews({
       ...REPO_INFO,
       pull_number: pr.pull_request.number,
     });
@@ -38,26 +38,26 @@ export default {
       pull_number: pr.pull_request.number,
     });
 
-    const activeReviews: typeof reviews = [];
+    const reviews: typeof allReviews = [];
 
     // Traverse the reviews from the bottom because reviews are in chronological order.
     // (Newest reviews are at the bottom)
-    for (let i = reviews.length - 1; i >= 0; i--) {
-      const hasReviewFromSameUser = activeReviews.some(r => r.user.id === reviews[i].user.id);
+    for (let i = allReviews.length - 1; i >= 0; i--) {
+      const hasReviewFromSameUser = reviews.some(r => r.user.id === reviews[i].user.id);
       const hasPendingReviewRequestForUser = requestedReviewers.users.some(request => request.id === reviews[i].user.id);
 
       // Only consider the latest review from each user AND
       // only consider a review if the user does NOT have a pending review.
       if (!hasReviewFromSameUser || !hasPendingReviewRequestForUser) {
-        activeReviews.push(reviews[i]);
+        reviews.push(allReviews[i]);
       }
     }
 
     const hasChangeset = Boolean((diff as unknown as string).includes(`pr-${pr.pull_request.number}`));
-    const isApproved = activeReviews.filter(r => r.state === "APPROVED").length >= 2;
-    const isAdditionalApprovalNeeded = activeReviews.filter(r => r.state === "APPROVED").length === 1;
+    const isApproved = reviews.filter(r => r.state === "APPROVED").length >= 2;
+    const isAdditionalApprovalNeeded = reviews.filter(r => r.state === "APPROVED").length === 1;
     const isReadyForReview = !isApproved && !isAdditionalApprovalNeeded;
-    const areChangesRequested = activeReviews.some(r => r.state === 'CHANGES_REQUESTED');
+    const areChangesRequested = reviews.some(r => r.state === 'CHANGES_REQUESTED');
 
     const isStaging = pr.pull_request.base.ref === 'staging';
     const isMaster = pr.pull_request.base.ref === 'master';
