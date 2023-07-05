@@ -33,10 +33,19 @@ export default {
       pull_number: pr.pull_request.number,
     });
 
+    const { data: requestedReviewers } = await octokit.rest.pulls.listRequestedReviewers({
+      ...REPO_INFO,
+      pull_number: pr.pull_request.number,
+    });
+
     const activeReviews: typeof reviews = [];
 
     for (let i = reviews.length - 1; i >= 0; i--) {
-      if (!activeReviews.some(r => r.user.id === reviews[i].user.id)) {
+      const hasReviewFromSameUser = activeReviews.some(r => r.user.id === reviews[i].user.id);
+      const hasPendingReviewRequestForUser = requestedReviewers.users.some(request => request.id === reviews[i].user.id);
+
+      // @todo is this what we want?
+      if (!hasReviewFromSameUser || !hasPendingReviewRequestForUser) {
         activeReviews.push(reviews[i]);
       }
     }
