@@ -64,10 +64,10 @@ export default {
     const changesRequestedLabel = 'Requires Changes';
 
     // Keep track of labels that have already been added so we don't add them again
-    const uniqueAddedLabels = new Set();
+    const uniqueAddedLabels = new Set<string>();
 
     // Labels that should be added / removed from the PR
-    const labels = new Set();
+    const labels = new Set<string>();
 
     if (hasChangeset) {
       labels.delete(missingChangesetLabel);
@@ -163,7 +163,7 @@ export default {
         await octokit.rest.issues.removeLabel({
           ...REPO_INFO,
           issue_number: pr.pull_request.number,
-          name: label as string,
+          name: label,
         });
       } catch(error) {
         console.error("Unable to delete label", label, "on PR", pr.pull_request.id, "with labels", pr.pull_request.labels);
