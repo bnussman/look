@@ -45,10 +45,12 @@ export default {
     for (let i = allReviews.length - 1; i >= 0; i--) {
       const hasReviewFromSameUser = reviews.some(r => r.user.id === allReviews[i].user.id);
       const hasPendingReviewRequestForUser = requestedReviewers.users.some(request => request.id === allReviews[i].user.id);
+      const isComment = allReviews[i].state === "COMMENTED";
 
       // Only consider the latest review from each user AND
-      // only consider a review if the user does NOT have a pending review.
-      if (!hasReviewFromSameUser && !hasPendingReviewRequestForUser) {
+      // only consider a review if the user does NOT have a pending review AND
+      // ignore just comments
+      if (!hasReviewFromSameUser && !hasPendingReviewRequestForUser && !isComment) {
         reviews.push(allReviews[i]);
       }
     }
