@@ -48,7 +48,7 @@ export default {
 
       // Only consider the latest review from each user AND
       // only consider a review if the user does NOT have a pending review.
-      if (!hasReviewFromSameUser || !hasPendingReviewRequestForUser) {
+      if (!hasReviewFromSameUser && !hasPendingReviewRequestForUser) {
         reviews.push(allReviews[i]);
       }
     }
