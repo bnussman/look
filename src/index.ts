@@ -40,11 +40,14 @@ export default {
 
     const activeReviews: typeof reviews = [];
 
+    // Traverse the reviews from the bottom because reviews are in chronological order.
+    // (Newest reviews are at the bottom)
     for (let i = reviews.length - 1; i >= 0; i--) {
       const hasReviewFromSameUser = activeReviews.some(r => r.user.id === reviews[i].user.id);
       const hasPendingReviewRequestForUser = requestedReviewers.users.some(request => request.id === reviews[i].user.id);
 
-      // @todo is this what we want?
+      // Only consider the latest review from each user AND
+      // only consider a review if the user does NOT have a pending review.
       if (!hasReviewFromSameUser || !hasPendingReviewRequestForUser) {
         activeReviews.push(reviews[i]);
       }
@@ -72,112 +75,57 @@ export default {
     const additionalApprovalLabel = "Add'tl Approval Needed";
     const changesRequestedLabel = 'Requires Changes';
 
-    // Keep track of labels that have already been added so we don't add them again
-    const uniqueAddedLabels = new Set<string>();
-
-    // Labels that should be added / removed from the PR
-    const labels = new Set<string>();
+    const labels = new Set<string>(pr.pull_request.labels.map(label => label.name));
 
     if (hasChangeset) {
       labels.delete(missingChangesetLabel);
-    } else {
-      if (
-        pr.action === 'opened' ||
-        (pr.action === 'reopened' &&
-          !uniqueAddedLabels.has(missingChangesetLabel))
-      ) {
-        uniqueAddedLabels.add(missingChangesetLabel);
-        labels.add(missingChangesetLabel);
-      }
+    } else if (pr.action === 'opened' || pr.action === 'reopened') {
+      labels.add(missingChangesetLabel);
     }
 
     if (isStaging) {
-      if (!uniqueAddedLabels.has(stagingLabel)) {
-        uniqueAddedLabels.add(stagingLabel);
-        labels.add(stagingLabel);
-      }
+      labels.add(stagingLabel);
     } else if (isMaster) {
-      if (!uniqueAddedLabels.has(releaseLabel)) {
-        uniqueAddedLabels.add(releaseLabel);
-        labels.add(releaseLabel);
-      }
+      labels.add(releaseLabel);
     } else if (isUpdate) {
-      if (!uniqueAddedLabels.has(masterDevelopLabel)) {
-        uniqueAddedLabels.add(masterDevelopLabel);
-        labels.add(masterDevelopLabel);
-      }
+      labels.add(masterDevelopLabel);
     }
 
     if (isHotfix) {
-      if (!uniqueAddedLabels.has(hotfixLabel)) {
-        uniqueAddedLabels.add(hotfixLabel);
-        labels.add(hotfixLabel);
-      }
+      labels.add(hotfixLabel);
     } else {
       labels.delete(hotfixLabel);
     }
 
     if (isApproved) {
-      if (!uniqueAddedLabels.has(approvedLabel)) {
-        uniqueAddedLabels.add(approvedLabel);
-        labels.add(approvedLabel);
-      }
+      labels.add(approvedLabel);
     } else {
       labels.delete(approvedLabel);
     }
 
     if (isReadyForReview) {
-      if (!uniqueAddedLabels.has(readyForReviewLabel)) {
-        uniqueAddedLabels.add(readyForReviewLabel);
-        labels.add(readyForReviewLabel);
-      }
+      labels.add(readyForReviewLabel);
     } else {
       labels.delete(readyForReviewLabel);
     }
 
     if (isAdditionalApprovalNeeded) {
-      if (!uniqueAddedLabels.has(additionalApprovalLabel)) {
-        uniqueAddedLabels.add(additionalApprovalLabel);
-        labels.add(additionalApprovalLabel);
-      }
+      labels.add(additionalApprovalLabel);
     } else {
       labels.delete(additionalApprovalLabel);
     }
 
     if (areChangesRequested) {
-      if (!uniqueAddedLabels.has(changesRequestedLabel)) {
-        uniqueAddedLabels.add(changesRequestedLabel);
-        labels.add(changesRequestedLabel);
-      }
+      labels.add(changesRequestedLabel);
     } else {
       labels.delete(changesRequestedLabel);
     }
 
-    const filteredLabels = Array.from(labels).filter(label => !pr.pull_request.labels.some(l => l.name === label))
-
-    if (filteredLabels.length > 0) {
-      await octokit.rest.issues.addLabels({
-        ...REPO_INFO,
-        issue_number: pr.pull_request.number,
-        filteredLabels,
-      });
-    }
-
-    for (const label of filteredLabels) {
-      // If the label isn't on the PR, there is no need to remove it
-      if (!pr.pull_request.labels.find((l) => l.name === label)) {
-        continue;
-      }
-      try {
-        await octokit.rest.issues.removeLabel({
-          ...REPO_INFO,
-          issue_number: pr.pull_request.number,
-          name: label,
-        });
-      } catch(error) {
-        console.error("Unable to delete label", label, "on PR", pr.pull_request.id, "with labels", pr.pull_request.labels);
-      }
-    }
+    await octokit.rest.issues.setLabels({
+      ...REPO_INFO,
+      issue_number: pr.pull_request.number,
+      labels: Array.from(labels),
+    });
 
     return new Response(`Success`);
   },
