@@ -20,7 +20,7 @@ export default {
       return new Response(`Doing nothing because PR is a draft`);
     }
 
-    const { data: diff } = await octokit.rest.pulls.get({
+    const { data: rawDiff } = await octokit.rest.pulls.get({
       ...REPO_INFO,
       pull_number: pr.pull_request.number,
       mediaType: {
@@ -53,7 +53,11 @@ export default {
       }
     }
 
-    const hasChangeset = Boolean((diff as unknown as string).includes(`pr-${pr.pull_request.number}`));
+    const diff = rawDiff as unknown as string;
+
+    const hasChangeset = diff.includes(`pr-${pr.pull_request.number}`);
+    const hasChangesInSDK = diff.includes(`packages/api-v4/src/`);
+    const hasChangesInValidation = diff.includes(`packages/validation/src/`);
     const isApproved = reviews.filter(r => r.state === "APPROVED").length >= 2;
     const isAdditionalApprovalNeeded = reviews.filter(r => r.state === "APPROVED").length === 1;
     const isReadyForReview = !isApproved && !isAdditionalApprovalNeeded;
@@ -74,6 +78,8 @@ export default {
     const readyForReviewLabel = 'Ready for Review';
     const additionalApprovalLabel = "Add'tl Approval Needed";
     const changesRequestedLabel = 'Requires Changes';
+    const sdkLabel = '@linode/api-v4';
+    const validationLabel = '@linode/validation';
 
     const labels = new Set<string>(pr.pull_request.labels.map(label => label.name));
 
@@ -119,6 +125,18 @@ export default {
       labels.add(changesRequestedLabel);
     } else {
       labels.delete(changesRequestedLabel);
+    }
+
+    if (hasChangesInSDK) {
+      labels.add(sdkLabel);
+    } else {
+      labels.delete(sdkLabel);
+    }
+
+    if (hasChangesInValidation) {
+      labels.add(validationLabel);
+    } else {
+      labels.delete(validationLabel);
     }
 
     await octokit.rest.issues.setLabels({
