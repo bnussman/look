@@ -65,7 +65,7 @@ export default {
 
     const isStaging = pr.pull_request.base.ref === 'staging';
     const isMaster = pr.pull_request.base.ref === 'master';
-    const isUpdate = pr.pull_request.base.ref === 'develop' && isMaster;
+    const isUpdate = pr.pull_request.base.ref === 'develop' && pr.pull_request.head.ref === 'master';
     const isHotfix = pr.pull_request.title.toLowerCase().includes('hotfix')
 
     // Labels
@@ -86,15 +86,27 @@ export default {
     if (hasChangeset) {
       labels.delete(missingChangesetLabel);
     } else if (pr.action === 'opened' || pr.action === 'reopened') {
+      // Only add "Missing Changeset" when the PR is opened so that users can remove the label
+      // and not have it re-added if the PR does not need a changeset.
       labels.add(missingChangesetLabel);
     }
 
     if (isStaging) {
       labels.add(stagingLabel);
-    } else if (isMaster) {
+    } else {
+      labels.delete(stagingLabel);
+    }
+    
+    if (isMaster) {
       labels.add(releaseLabel);
-    } else if (isUpdate) {
+    } else {
+      labels.delete(releaseLabel);
+    }
+
+    if (isUpdate) {
       labels.add(masterDevelopLabel);
+    } else {
+      labels.delete(masterDevelopLabel);
     }
 
     if (isHotfix) {
