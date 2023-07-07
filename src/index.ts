@@ -57,8 +57,8 @@ export default {
 
     const diff = rawDiff as unknown as string;
 
-    const isApproved = reviews.filter(r => r.state === "APPROVED").length >= 2;
-    const isAdditionalApprovalNeeded = reviews.filter(r => r.state === "APPROVED").length === 1;
+    const isApproved = reviews.filter((r) => r.state === "APPROVED").length >= 2;
+    const isAdditionalApprovalNeeded = reviews.filter((r) => r.state === "APPROVED").length === 1;
     const isReadyForReview = !isApproved && !isAdditionalApprovalNeeded;
 
     const labels = new Set<string>(pr.pull_request.labels.map(label => label.name));
@@ -107,7 +107,15 @@ export default {
       {
         label: '@linode/validation',
         condition: diff.includes(`packages/validation/src/`),
-      }
+      },
+      {
+        label: 'AGLB',
+        condition: diff.includes(`packages/manager/src/features/aglb`),
+      },
+      {
+        label: 'VPC',
+        condition: diff.includes(`packages/manager/src/features/vpc`),
+      },
     ];
 
     for (const { label, condition } of labelConditions) {
