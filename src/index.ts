@@ -57,100 +57,65 @@ export default {
 
     const diff = rawDiff as unknown as string;
 
-    const hasChangeset = diff.includes(`pr-${pr.pull_request.number}`);
-    const hasChangesInSDK = diff.includes(`packages/api-v4/src/`);
-    const hasChangesInValidation = diff.includes(`packages/validation/src/`);
     const isApproved = reviews.filter(r => r.state === "APPROVED").length >= 2;
     const isAdditionalApprovalNeeded = reviews.filter(r => r.state === "APPROVED").length === 1;
     const isReadyForReview = !isApproved && !isAdditionalApprovalNeeded;
-    const areChangesRequested = reviews.some(r => r.state === 'CHANGES_REQUESTED');
-
-    const isStaging = pr.pull_request.base.ref === 'staging';
-    const isMaster = pr.pull_request.base.ref === 'master';
-    const isUpdate = pr.pull_request.base.ref === 'develop' && pr.pull_request.head.ref === 'master';
-    const isHotfix = pr.pull_request.title.toLowerCase().includes('hotfix')
-
-    // Labels
-    const missingChangesetLabel = 'Missing Changeset';
-    const stagingLabel = 'Release → Staging';
-    const releaseLabel = 'Release';
-    const masterDevelopLabel = 'Master → Develop';
-    const hotfixLabel = 'Hotfix';
-    const approvedLabel = 'Approved';
-    const readyForReviewLabel = 'Ready for Review';
-    const additionalApprovalLabel = "Add'tl Approval Needed";
-    const changesRequestedLabel = 'Requires Changes';
-    const sdkLabel = '@linode/api-v4';
-    const validationLabel = '@linode/validation';
 
     const labels = new Set<string>(pr.pull_request.labels.map(label => label.name));
 
-    if (hasChangeset) {
-      labels.delete(missingChangesetLabel);
-    } else if (pr.action === 'opened' || pr.action === 'reopened') {
-      // Only add "Missing Changeset" when the PR is opened so that users can remove the label
-      // and not have it re-added if the PR does not need a changeset.
-      labels.add(missingChangesetLabel);
-    }
+    const labelConditions = [
+      {
+        label: "Missing Changeset",
+        condition: diff.includes(`pr-${pr.pull_request.number}`),
+      },
+      {
+        label: "Release → Staging",
+        condition: pr.pull_request.base.ref === "staging",
+      },
+      {
+        label: 'Release',
+        condition: pr.pull_request.base.ref === 'master',
+      },
+      {
+        label: 'Master → Develop',
+        condition: pr.pull_request.base.ref === 'develop' && pr.pull_request.head.ref === 'master',
+      },
+      {
+        label: "Hotfix",
+        condition: pr.pull_request.title.toLowerCase().includes('hotfix'),
+      },
+      {
+        label: "Approved",
+        condition: isApproved
+      },
+      {
+        label: "Ready for Review",
+        condition: isReadyForReview
+      },
+      {
+        label: "Add'tl Approval Needed",
+        condition: isAdditionalApprovalNeeded,
+      },
+      {
+        label: 'Requires Changes',
+        condition: reviews.some((r) => r.state === 'CHANGES_REQUESTED'),
+      },
+      {
+        label: '@linode/api-v4',
+        condition: diff.includes(`packages/api-v4/src/`),
+      },
+      {
+        label: '@linode/validation',
+        condition: diff.includes(`packages/validation/src/`),
+      }
+    ];
 
-    if (isStaging) {
-      labels.add(stagingLabel);
-    } else {
-      labels.delete(stagingLabel);
-    }
-    
-    if (isMaster) {
-      labels.add(releaseLabel);
-    } else {
-      labels.delete(releaseLabel);
-    }
-
-    if (isUpdate) {
-      labels.add(masterDevelopLabel);
-    } else {
-      labels.delete(masterDevelopLabel);
-    }
-
-    if (isHotfix) {
-      labels.add(hotfixLabel);
-    } else {
-      labels.delete(hotfixLabel);
-    }
-
-    if (isApproved) {
-      labels.add(approvedLabel);
-    } else {
-      labels.delete(approvedLabel);
-    }
-
-    if (isReadyForReview) {
-      labels.add(readyForReviewLabel);
-    } else {
-      labels.delete(readyForReviewLabel);
-    }
-
-    if (isAdditionalApprovalNeeded) {
-      labels.add(additionalApprovalLabel);
-    } else {
-      labels.delete(additionalApprovalLabel);
-    }
-
-    if (areChangesRequested) {
-      labels.add(changesRequestedLabel);
-    } else {
-      labels.delete(changesRequestedLabel);
-    }
-
-    if (hasChangesInSDK) {
-      labels.add(sdkLabel);
-    } else {
-      labels.delete(sdkLabel);
-    }
-
-    if (hasChangesInValidation) {
-      labels.add(validationLabel);
-    } else {
-      labels.delete(validationLabel);
+    for (const { label, condition } of labelConditions) {
+      if (condition) {
+        labels.add(label)
+      } else {
+        labels.delete(label)
+      }
     }
 
     await octokit.rest.issues.setLabels({
