@@ -55,6 +55,37 @@ export default {
       }
     }
 
+    const query = `
+      query {
+        resource(url:"https://github.com/atom/atom/pull/${pr.pull_request.number}") {
+          ... on PullRequest {
+            labels(first:10) {
+              edges {
+                label: node {
+                  name
+                  createdAt
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const graphqlWithAuth = octokit.request.defaults({
+      headers: {
+        authorization: `token ${env.GITHUB_TOKEN}`,
+      },
+    });
+
+    try {
+      const response = await graphqlWithAuth(query);
+
+      console.log("Labels Response", response);
+    } catch (e) {
+      console.error("Labels Error", e)
+    }
+
     const diff = rawDiff as unknown as string;
 
     const isApproved = reviews.filter((r) => r.state === "APPROVED").length >= 2;
