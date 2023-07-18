@@ -1,6 +1,8 @@
 import { Webhook } from "./types";
 import { Octokit } from "octokit";
 
+const BOT_USERNAME = "bnussman-akamai";
+
 const REPO_INFO = {
   owner: 'linode',
   repo: 'manager',
@@ -55,15 +57,19 @@ export default {
       }
     }
 
-    const query = `
+    const UNLABELED_QUERY = `
       query {
-        resource(url:"https://github.com/atom/atom/pull/${pr.pull_request.number}") {
+        resource(url:"https://github.com/linode/manager/pull/${pr.pull_request.number}") {
           ... on PullRequest {
-            labels(first:10) {
-              edges {
-                label: node {
-                  name
-                  createdAt
+            timelineItems(last: 100, itemTypes: [UNLABELED_EVENT]) {
+              nodes {
+                ... on UnlabeledEvent {
+                  actor {
+                    login
+                  }
+                  label {
+                    name
+                  }
                 }
               }
             }
@@ -72,19 +78,51 @@ export default {
       }
     `;
 
-    const graphqlWithAuth = octokit.request.defaults({
-      headers: {
-        authorization: `token ${env.GITHUB_TOKEN}`,
+    const LABELED_QUERY = `
+      query {
+        resource(url:"https://github.com/linode/manager/pull/${pr.pull_request.number}") {
+          ... on PullRequest {
+            timelineItems(last: 100, itemTypes: [LABELED_EVENT]) {
+              nodes {
+                ... on LabeledEvent {
+                  actor {
+                    login
+                  }
+                  label {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const unlabeledData = await octokit.graphql<any>(UNLABELED_QUERY);
+
+    const unlabelEvents = unlabeledData.resource.timelineItems.nodes as {
+      actor: {
+        login: string
       },
-    });
+      label: {
+        name: string
+      }
+    }[];
 
-    try {
-      const response = await graphqlWithAuth(query);
+    const labeledData = await octokit.graphql<any>(LABELED_QUERY);
 
-      console.log("Labels Response", response);
-    } catch (e) {
-      console.error("Labels Error", e)
-    }
+    const labeledEvents = labeledData.resource.timelineItems.nodes as {
+      actor: {
+        login: string
+      },
+      label: {
+        name: string
+      }
+    }[];
+
+    const unlabelEventsNotMadeByThisBot = unlabelEvents.filter(event => event.actor.login !== BOT_USERNAME);
+    const labeldEventsNotMadeByThisBot = labeledEvents.filter(event => event.actor.login !== BOT_USERNAME);
 
     const diff = rawDiff as unknown as string;
 
@@ -150,9 +188,13 @@ export default {
     ];
 
     for (const { label, condition } of labelConditions) {
-      if (condition) {
+      const wasManuallyUnabled = unlabelEventsNotMadeByThisBot.some(e => e.label.name === label);
+      const wasManuallyLabeled = labeldEventsNotMadeByThisBot.some(e => e.label.name === label);
+
+      if (condition && !wasManuallyUnabled) {
         labels.add(label)
-      } else {
+      }
+      if (!condition && !wasManuallyLabeled) {
         labels.delete(label)
       }
     }
