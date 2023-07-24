@@ -135,7 +135,7 @@ export default {
     const labelConditions = [
       {
         label: "Missing Changeset",
-        condition: !diff.includes(`pr-${pr.pull_request.number}`) && pr.pull_request.base.ref === 'develop',
+        condition: !diff.includes(`pr-${pr.pull_request.number}`) && pr.pull_request.base.ref === 'develop' && !(pr.pull_request.head.ref === 'master'),
       },
       {
         label: "Release → Staging",
@@ -169,22 +169,22 @@ export default {
         label: 'Requires Changes',
         condition: reviews.some((r) => r.state === 'CHANGES_REQUESTED'),
       },
-      {
-        label: '@linode/api-v4',
-        condition: diff.includes(`packages/api-v4/src/`),
-      },
-      {
-        label: '@linode/validation',
-        condition: diff.includes(`packages/validation/src/`),
-      },
-      {
-        label: 'AGLB',
-        condition: diff.includes(`packages/manager/src/features/aglb`),
-      },
-      {
-        label: 'VPC',
-        condition: diff.includes(`packages/manager/src/features/vpc`),
-      },
+      // {
+      //   label: '@linode/api-v4',
+      //   condition: diff.includes(`packages/api-v4/src/`),
+      // },
+      // {
+      //   label: '@linode/validation',
+      //   condition: diff.includes(`packages/validation/src/`),
+      // },
+      // {
+      //   label: 'AGLB',
+      //   condition: diff.includes(`packages/manager/src/features/aglb`),
+      // },
+      // {
+      //   label: 'VPC',
+      //   condition: diff.includes(`packages/manager/src/features/vpc`),
+      // },
     ];
 
     for (const { label, condition } of labelConditions) {
