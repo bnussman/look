@@ -135,7 +135,7 @@ export default {
     const labelConditions = [
       {
         label: "Missing Changeset",
-        condition: !diff.includes(`pr-${pr.pull_request.number}`),
+        condition: !diff.includes(`pr-${pr.pull_request.number}`) && pr.pull_request.base.ref === 'develop',
       },
       {
         label: "Release → Staging",
