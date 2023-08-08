@@ -188,13 +188,13 @@ export default {
     ];
 
     for (const { label, condition } of labelConditions) {
-      const wasManuallyUnabled = unlabelEventsNotMadeByThisBot.some(e => e.label.name === label);
-      const wasManuallyLabeled = labeldEventsNotMadeByThisBot.some(e => e.label.name === label);
+      // const wasManuallyUnabled = unlabelEventsNotMadeByThisBot.some(e => e.label.name === label);
+      // const wasManuallyLabeled = labeldEventsNotMadeByThisBot.some(e => e.label.name === label);
 
-      if (condition && !wasManuallyUnabled) {
+      if (condition) {
         labels.add(label)
       }
-      if (!condition && !wasManuallyLabeled) {
+      if (!condition) {
         labels.delete(label)
       }
     }
