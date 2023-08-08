@@ -139,11 +139,11 @@ export default {
       },
       {
         label: "Release → Staging",
-        condition: pr.pull_request.base.ref === "staging",
+        condition: pr.pull_request.base.ref === "staging" && pr.pull_request.head.ref.includes('release'),
       },
       {
         label: 'Release',
-        condition: pr.pull_request.base.ref === 'master',
+        condition: pr.pull_request.base.ref === 'master' && pr.pull_request.head.ref === 'staging',
       },
       {
         label: 'Master → Develop',
