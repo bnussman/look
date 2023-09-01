@@ -14,6 +14,8 @@ export interface Env {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    return new Response(`Banksbot is off`);
+
     const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
 
     const pr = await request.json<Webhook>();
